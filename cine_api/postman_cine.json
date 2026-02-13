@@ -1,0 +1,632 @@
+{
+  "info": {
+    "_postman_id": "c1n3-ap1-2026-abcd-123456789000",
+    "name": "Cine API (Django + Postgres + JWT + Mongo)",
+    "description": "✅ NUEVO ARCHIVO ACTUALIZADO - API para gestión de funciones de cine y reservaciones con PostgreSQL y MongoDB. CAMBIOS: Reemplaza 'Vehículos' por 'Shows/Reservations', 'service_types' por 'movie_catalogs', y 'vehicle_services' por 'reservation_events'.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8000",
+      "type": "string",
+      "description": "🔧 CAMBIAR si tu servidor está en otro puerto o dominio"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string",
+      "description": "✅ Se llena automáticamente al hacer Login"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string",
+      "description": "✅ Se llena automáticamente al hacer Login"
+    },
+    {
+      "key": "showId",
+      "value": "",
+      "type": "string",
+      "description": "✅ Se llena automáticamente al crear un Show (antes era serviceTypeId)"
+    },
+    {
+      "key": "reservationId",
+      "value": "",
+      "type": "string",
+      "description": "✅ Se llena automáticamente al crear una Reservation (antes era vehicleServiceId)"
+    },
+    {
+      "key": "movieCatalogId",
+      "value": "",
+      "type": "string",
+      "description": "✅ NUEVO - Se llena automáticamente al crear un Movie Catalog"
+    },
+    {
+      "key": "reservationEventId",
+      "value": "",
+      "type": "string",
+      "description": "✅ NUEVO - Se llena automáticamente al crear un Reservation Event"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "description": "✅ SIN CAMBIOS - Endpoints de autenticación JWT (igual que en el archivo original)",
+      "item": [
+        {
+          "name": "Register - POST /api/auth/register/",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register", ""]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"user1\",\n  \"email\": \"user1@mail.com\",\n  \"password\": \"123456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json",
+                  "description": "🔧 PERSONALIZAR: Cambiar username, email y password según tus necesidades"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Login - POST /api/auth/login/ (guarda tokens)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let jsonData = {};",
+                  "try { jsonData = pm.response.json(); } catch (e) {}",
+                  "",
+                  "if (jsonData.access) {",
+                  "  pm.collectionVariables.set('accessToken', jsonData.access);",
+                  "}",
+                  "",
+                  "if (jsonData.refresh) {",
+                  "  pm.collectionVariables.set('refreshToken', jsonData.refresh);",
+                  "}",
+                  "",
+                  "pm.test('Token access recibido', function () {",
+                  "  pm.expect(jsonData.access).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login", ""]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json",
+                  "description": "🔧 PERSONALIZAR: Usar las credenciales del superuser que creaste con 'python manage.py createsuperuser'"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Refresh - POST /api/auth/refresh/",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let jsonData = {};",
+                  "try { jsonData = pm.response.json(); } catch (e) {}",
+                  "if (jsonData.access) pm.collectionVariables.set('accessToken', jsonData.access);",
+                  "pm.test('Token access refrescado', function () { pm.expect(jsonData.access).to.be.a('string'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/refresh/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "refresh", ""]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh\": \"{{refreshToken}}\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Postgres - Shows (Funciones)",
+      "description": "✅ CAMBIÓ DE 'Postgres - Marcas' → 'Shows'. URLs cambiadas de /api/marcas/ a /api/shows/. Campos cambiados de {nombre} a {movie_title, room, price, available_seats}",
+      "item": [
+        {
+          "name": "List shows - GET /api/shows/",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/shows/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "shows", ""],
+              "description": "🔧 PERSONALIZAR: Agregar parámetros de búsqueda como ?search=Avatar o ?ordering=-price"
+            }
+          }
+        },
+        {
+          "name": "Search shows - GET /api/shows/?search=Avatar",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/shows/?search=Avatar",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "shows", ""],
+              "query": [{ "key": "search", "value": "Avatar" }]
+            }
+          }
+        },
+        {
+          "name": "Create show (Admin) - POST /api/shows/ (guarda showId)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let jsonData = {};",
+                  "try { jsonData = pm.response.json(); } catch (e) {}",
+                  "if (jsonData.id) pm.collectionVariables.set('showId', jsonData.id);",
+                  "pm.test('Se creó show', function () { pm.expect(jsonData.id).to.be.a('number'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/shows/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "shows", ""]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"movie_title\": \"Avatar 3\",\n  \"room\": \"Sala VIP-1\",\n  \"price\": \"15.50\",\n  \"available_seats\": 120\n}",
+              "options": {
+                "raw": {
+                  "language": "json",
+                  "description": "🔧 PERSONALIZAR: movie_title (título película), room (sala), price (precio entrada), available_seats (asientos disponibles). ANTES ERA: {nombre: 'Toyota'}"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Get show by id - GET /api/shows/:id",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/shows/{{showId}}/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "shows", "{{showId}}", ""]
+            }
+          }
+        },
+        {
+          "name": "Update show (Admin) - PUT /api/shows/:id",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/shows/{{showId}}/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "shows", "{{showId}}", ""]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"movie_title\": \"Avatar 3\",\n  \"room\": \"Sala VIP-1\",\n  \"price\": \"18.00\",\n  \"available_seats\": 100\n}"
+            }
+          }
+        },
+        {
+          "name": "Patch show (Admin) - PATCH /api/shows/:id",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/shows/{{showId}}/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "shows", "{{showId}}", ""]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"available_seats\": 95\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete show (Admin) - DELETE /api/shows/:id",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/shows/{{showId}}/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "shows", "{{showId}}", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Postgres - Reservations",
+      "description": "✅ CAMBIÓ DE 'Postgres - Vehiculos' → 'Reservations'. URLs cambiadas de /api/vehiculos/ a /api/reservations/. Campos cambiados de {marca, modelo, anio, placa, color} a {show, customer_name, seats, status}",
+      "item": [
+        {
+          "name": "List reservations (Public) - GET /api/reservations/",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/reservations/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reservations", ""],
+              "description": "🔧 PERSONALIZAR: Agregar filtros como ?show=1 o búsqueda ?search=Juan"
+            }
+          }
+        },
+        {
+          "name": "Filter reservations by show - GET /api/reservations/?show=1",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/reservations/?show={{showId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reservations", ""],
+              "query": [{ "key": "show", "value": "{{showId}}" }]
+            }
+          }
+        },
+        {
+          "name": "Create reservation (Admin) - POST /api/reservations/ (guarda reservationId)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let jsonData = {};",
+                  "try { jsonData = pm.response.json(); } catch (e) {}",
+                  "if (jsonData.id) pm.collectionVariables.set('reservationId', jsonData.id);",
+                  "pm.test('Se creó reservación', function () { pm.expect(jsonData.id).to.be.a('number'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservations/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reservations", ""]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"show\": {{showId}},\n  \"customer_name\": \"Juan Pérez\",\n  \"seats\": 3,\n  \"status\": \"Reserved\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json",
+                  "description": "🔧 PERSONALIZAR: show (ID de función), customer_name (nombre cliente), seats (cantidad asientos), status (Reserved/Confirmed/Cancelled). ANTES ERA: {marca, modelo, anio, placa, color}"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Get reservation by id - GET /api/reservations/:id",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/reservations/{{reservationId}}/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reservations", "{{reservationId}}", ""]
+            }
+          }
+        },
+        {
+          "name": "Update reservation status (Admin) - PATCH /api/reservations/:id",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservations/{{reservationId}}/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reservations", "{{reservationId}}", ""]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Confirmed\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete reservation (Admin) - DELETE /api/reservations/:id",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservations/{{reservationId}}/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reservations", "{{reservationId}}", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Mongo - Movie Catalogs",
+      "description": "✅ CAMBIÓ DE 'Mongo - service_types' → 'Movie Catalogs'. URLs cambiadas de /api/service-types/ a /api/movie-catalogs/. Campos cambiados de {name, description, base_price, is_active} a {movie_title, genre, duration_min, rating, is_active}",
+      "item": [
+        {
+          "name": "List movie catalogs (Auth) - GET /api/movie-catalogs/",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/movie-catalogs/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "movie-catalogs", ""],
+              "description": "🔧 REQUIERE autenticación (token)"
+            }
+          }
+        },
+        {
+          "name": "Create movie catalog (Auth) - POST /api/movie-catalogs/ (guarda movieCatalogId)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let jsonData = {};",
+                  "try { jsonData = pm.response.json(); } catch (e) {}",
+                  "if (jsonData.id) pm.collectionVariables.set('movieCatalogId', jsonData.id);",
+                  "pm.test('Se creó movie catalog', function () { pm.expect(jsonData.id).to.be.a('string'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/movie-catalogs/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "movie-catalogs", ""]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"movie_title\": \"Avatar 3\",\n  \"genre\": \"Sci-Fi\",\n  \"duration_min\": 180,\n  \"rating\": \"PG-13\",\n  \"is_active\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json",
+                  "description": "🔧 PERSONALIZAR: movie_title (título), genre (género), duration_min (duración en minutos), rating (clasificación), is_active (activa en cartelera). ANTES ERA: {name, description, base_price, is_active}"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Get movie catalog by id (Auth) - GET /api/movie-catalogs/:id",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/movie-catalogs/{{movieCatalogId}}/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "movie-catalogs", "{{movieCatalogId}}", ""]
+            }
+          }
+        },
+        {
+          "name": "Patch movie catalog (Auth) - PATCH /api/movie-catalogs/:id",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/movie-catalogs/{{movieCatalogId}}/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "movie-catalogs", "{{movieCatalogId}}", ""]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_active\": false\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete movie catalog (Auth) - DELETE /api/movie-catalogs/:id",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/movie-catalogs/{{movieCatalogId}}/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "movie-catalogs", "{{movieCatalogId}}", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Mongo - Reservation Events",
+      "description": "✅ CAMBIÓ DE 'Mongo - vehicle_services' → 'Reservation Events'. URLs cambiadas de /api/vehicle-services/ a /api/reservation-events/. Campos cambiados de {vehiculo_id, service_type_id, date, kilometers, cost, notes} a {reservation_id, event_type, source, note}",
+      "item": [
+        {
+          "name": "List reservation events (Auth) - GET /api/reservation-events/",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservation-events/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reservation-events", ""],
+              "description": "🔧 REQUIERE autenticación - Log de eventos de auditoría"
+            }
+          }
+        },
+        {
+          "name": "Create reservation event (Auth) - POST /api/reservation-events/ (guarda reservationEventId)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let jsonData = {};",
+                  "try { jsonData = pm.response.json(); } catch (e) {}",
+                  "if (jsonData.id) pm.collectionVariables.set('reservationEventId', jsonData.id);",
+                  "pm.test('Se creó reservation event', function () { pm.expect(jsonData.id).to.be.a('string'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservation-events/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reservation-events", ""]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reservation_id\": {{reservationId}},\n  \"event_type\": \"Confirmed\",\n  \"source\": \"Web\",\n  \"note\": \"Cliente confirmó por email\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json",
+                  "description": "🔧 PERSONALIZAR: reservation_id (ID de reservación en PostgreSQL), event_type (Created/Confirmed/Cancelled/Checked-In), source (Web/Mobile/System), note (comentario opcional). ANTES ERA: {vehiculo_id, service_type_id, date, kilometers, cost, notes}"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Get reservation event by id (Auth) - GET /api/reservation-events/:id",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservation-events/{{reservationEventId}}/",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "reservation-events",
+                "{{reservationEventId}}",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "Patch reservation event (Auth) - PATCH /api/reservation-events/:id",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservation-events/{{reservationEventId}}/",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "reservation-events",
+                "{{reservationEventId}}",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": \"Nota actualizada\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete reservation event (Auth) - DELETE /api/reservation-events/:id",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservation-events/{{reservationEventId}}/",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "api",
+                "reservation-events",
+                "{{reservationEventId}}",
+                ""
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
